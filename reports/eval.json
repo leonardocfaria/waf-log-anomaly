@@ -1,0 +1,144 @@
+{
+  "train": {
+    "n_sessions": 400,
+    "seed": 1
+  },
+  "test": {
+    "n_sessions": 400,
+    "seed": 2,
+    "attack_sessions_per_class": 15
+  },
+  "n_test_requests": 5181,
+  "threshold": 0.6282,
+  "runtime_seconds": 51.7,
+  "per_class_detection_rate": {
+    "benign": {
+      "n": 3752,
+      "rules": 0.0,
+      "iforest": 0.0117,
+      "iforest+novelty": 0.0117,
+      "combined (rules + iforest+novelty)": 0.0117
+    },
+    "sqli": {
+      "n": 106,
+      "rules": 1.0,
+      "iforest": 1.0,
+      "iforest+novelty": 1.0,
+      "combined (rules + iforest+novelty)": 1.0
+    },
+    "xss": {
+      "n": 109,
+      "rules": 1.0,
+      "iforest": 1.0,
+      "iforest+novelty": 1.0,
+      "combined (rules + iforest+novelty)": 1.0
+    },
+    "path_traversal": {
+      "n": 76,
+      "rules": 1.0,
+      "iforest": 0.9868,
+      "iforest+novelty": 0.9868,
+      "combined (rules + iforest+novelty)": 1.0
+    },
+    "scanner": {
+      "n": 193,
+      "rules": 0.8187,
+      "iforest": 0.2487,
+      "iforest+novelty": 0.2487,
+      "combined (rules + iforest+novelty)": 0.8497
+    },
+    "bruteforce": {
+      "n": 858,
+      "rules": 0.0,
+      "iforest": 1.0,
+      "iforest+novelty": 1.0,
+      "combined (rules + iforest+novelty)": 1.0
+    },
+    "obfuscated": {
+      "n": 87,
+      "rules": 0.3103,
+      "iforest": 0.8966,
+      "iforest+novelty": 0.9655,
+      "combined (rules + iforest+novelty)": 0.9655
+    }
+  },
+  "overall": {
+    "rules": {
+      "precision": 1.0,
+      "recall": 0.3331,
+      "f1": 0.4997,
+      "fpr": 0.0
+    },
+    "iforest": {
+      "precision": 0.9666,
+      "recall": 0.8915,
+      "f1": 0.9276,
+      "fpr": 0.0117
+    },
+    "iforest+novelty": {
+      "precision": 0.9668,
+      "recall": 0.8957,
+      "f1": 0.9299,
+      "fpr": 0.0117
+    },
+    "combined (rules + iforest+novelty)": {
+      "precision": 0.9695,
+      "recall": 0.9776,
+      "f1": 0.9735,
+      "fpr": 0.0117
+    }
+  },
+  "rule_precision": {
+    "sqli": {
+      "fired": 117,
+      "precision": 0.906,
+      "labels_when_fired": {
+        "sqli": 106,
+        "obfuscated": 11
+      }
+    },
+    "xss": {
+      "fired": 125,
+      "precision": 0.872,
+      "labels_when_fired": {
+        "xss": 109,
+        "obfuscated": 16
+      }
+    },
+    "path_traversal": {
+      "fired": 76,
+      "precision": 1.0,
+      "labels_when_fired": {
+        "path_traversal": 76
+      }
+    },
+    "scanner": {
+      "fired": 158,
+      "precision": 1.0,
+      "labels_when_fired": {
+        "scanner": 158
+      }
+    }
+  },
+  "top_feature_of_anomaly_only_detections": {
+    "bruteforce": {
+      "post_ratio": 360,
+      "rate_per_min": 498
+    },
+    "benign": {
+      "pct_encoded": 23,
+      "special_ratio": 7,
+      "post_ratio": 10,
+      "ratio_4xx": 3,
+      "distinct_path_ratio": 1
+    },
+    "obfuscated": {
+      "pct_encoded": 42,
+      "special_ratio": 15
+    },
+    "scanner": {
+      "rate_per_min": 5,
+      "ratio_4xx": 1
+    }
+  }
+}

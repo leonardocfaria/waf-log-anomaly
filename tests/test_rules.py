@@ -23,6 +23,7 @@ class RulesTest(unittest.TestCase):
         self.assertIn("path_traversal", match(req("/download", "file=../../../etc/passwd")))
         self.assertIn("path_traversal", match(req("/static/%2e%2e%2f%2e%2e%2fetc/shadow")))
         self.assertIn("path_traversal", match(req("/download", "file=%252e%252e%252fetc%252fpasswd")))
+        self.assertIn("path_traversal", match(req("/download", "file=%25252e%25252e%25252fetc%25252fpasswd")))
 
     def test_scanner(self):
         self.assertIn("scanner", match(req(ua="sqlmap/1.7.2#stable (https://sqlmap.org)")))

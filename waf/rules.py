@@ -17,8 +17,14 @@ _PATH = re.compile(_SCANNER_PATH, re.I)
 
 
 def _decoded(s: str) -> str:
-    once = unquote_plus(s)
-    return once + "\n" + unquote_plus(once)  # second pass catches double encoding (%252e -> %2e -> .)
+    """All decoding layers joined, so multi-encoded payloads (%25252e -> %252e -> %2e -> .) still match."""
+    layers = [s]
+    for _ in range(4):
+        nxt = unquote_plus(layers[-1])
+        if nxt == layers[-1]:
+            break
+        layers.append(nxt)
+    return "\n".join(layers)
 
 
 def match(r: dict) -> list[str]:
