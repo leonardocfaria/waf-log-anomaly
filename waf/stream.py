@@ -6,6 +6,7 @@ import argparse
 import html
 import json
 import os
+import queue
 import sys
 import threading
 from collections import Counter, deque
@@ -162,14 +163,19 @@ def main():
     srv = make_server(a.host, a.port, state)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     print(f"dashboard on http://{a.host}:{a.port}/ ; tailing {a.log}", file=sys.stderr)
+    q = queue.Queue(maxsize=100_000)
+    threading.Thread(target=lambda: [q.put(x) for x in follow(a.log, stop, from_start=a.from_start)], daemon=True).start()
     try:
-        for line in follow(a.log, stop, from_start=a.from_start):
-            r = det.process(line)
-            state.update(r)
-            if r and r["verdict"] != "benign":
-                print(json.dumps(_brief(r)), flush=True)
+        while True:
+            batch = [q.get()]
+            while len(batch) < 1000 and not q.empty():  # score whatever has queued up in one model call
+                batch.append(q.get_nowait())
+            for r in det.process_batch(batch):
+                state.update(r)
+                if r and r["verdict"] != "benign":
+                    print(json.dumps(_brief(r)), flush=True)
     except KeyboardInterrupt:
-        pass
+        stop.set()
 
 
 if __name__ == "__main__":

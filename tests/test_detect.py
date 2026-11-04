@@ -77,6 +77,13 @@ class DetectorTest(unittest.TestCase):
         self.assertIn("pct_encoded", r["novel"])
         self.assertEqual(r["top_features"][0][0], "pct_encoded")
 
+    def test_batch_matches_single(self):
+        lines = [line(ip="10.5.5.5", target="/products/3"), "junk", line(ip="10.5.5.5", target="/item?id=1%27--")]
+        batch = Detector(self.det.model).process_batch(lines)
+        single = Detector(self.det.model)
+        self.assertEqual(batch, [single.process(x) for x in lines])
+        self.assertIsNone(batch[1])
+
     def test_bad_line(self):
         self.assertIsNone(self.det.process("nope"))
 

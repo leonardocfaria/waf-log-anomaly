@@ -42,11 +42,8 @@ def main():
         train_log, _ = generate(d, "train", **TRAIN)
         test_log, test_labels = generate(d, "test", **TEST)
         det = Detector.train_on_log(str(train_log))
-        rows = []
-        for line, label in zip(test_log.read_text().splitlines(), test_labels.read_text().splitlines()):
-            r = det.process(line)
-            if r:
-                rows.append((label, r))
+        results = det.process_batch(test_log.read_text().splitlines())
+        rows = [(label, r) for label, r in zip(test_labels.read_text().splitlines(), results) if r]
     secs = time.time() - t0
 
     detectors = {  # name -> did this request get flagged?

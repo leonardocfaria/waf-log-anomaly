@@ -1,0 +1,23 @@
+# Demo: dummy app + traffic generator + streaming detector. Everything stays on the compose network;
+# only the dashboard is published, on 127.0.0.1:8090.
+services:
+  dummy-app:
+    build: .
+    command: python -m waf.app --host 0.0.0.0 --port 8000 --log /data/access.log --trust-headers
+    volumes: ["logs:/data"]
+  detector:
+    build: .
+    # Fit on freshly generated benign traffic (in-process, loopback only), then tail the shared log.
+    command: >
+      sh -c "python -m waf.traffic --local-log /tmp/benign.log --sessions 400 --attacks-per-class 0 --seed 1 &&
+             python -m waf.stream --train /tmp/benign.log --log /data/access.log --from-start --host 0.0.0.0 --port 8090"
+    volumes: ["logs:/data:ro"]
+    ports: ["127.0.0.1:8090:8090"]
+    depends_on: [dummy-app]
+  traffic:
+    build: .
+    # Targets only the dummy-app service started above (waf.traffic refuses any other host).
+    command: sh -c "sleep 10 && python -m waf.traffic --url http://dummy-app:8000 --sessions 200 --attacks-per-class 5 --seed 2"
+    depends_on: [dummy-app, detector]
+volumes:
+  logs:

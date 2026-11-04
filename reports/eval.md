@@ -1,6 +1,6 @@
 # Evaluation
 
-Synthetic traffic against the local dummy app. Train: 400 benign sessions (seed 1). Test: 400 benign sessions + 15 sessions per attack class (seed 2), 5181 requests. Isolation Forest threshold = 99th percentile of benign training scores (0.6282). Runtime 52 s on CPU.
+Synthetic traffic against the local dummy app. Train: 400 benign sessions (seed 1). Test: 400 benign sessions + 15 sessions per attack class (seed 2), 5181 requests. Isolation Forest threshold = 99th percentile of benign training scores (0.6282). Runtime 5 s on CPU.
 
 ## Detection rate per class (recall; for `benign` it is the false-positive rate)
 

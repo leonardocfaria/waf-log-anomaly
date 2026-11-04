@@ -10,7 +10,7 @@
   },
   "n_test_requests": 5181,
   "threshold": 0.6282,
-  "runtime_seconds": 51.7,
+  "runtime_seconds": 5.3,
   "per_class_detection_rate": {
     "benign": {
       "n": 3752,
