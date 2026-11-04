@@ -4,6 +4,7 @@ python -m waf.traffic --url http://127.0.0.1:8000 --sessions 300 --attacks-per-c
 """
 import argparse
 import random
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -122,7 +123,19 @@ if __name__ == "__main__":
     ap.add_argument("--attacks-per-class", type=int, default=15)
     ap.add_argument("--seed", type=int, default=2)
     ap.add_argument("--start", type=float, default=None, help="simulated start time (epoch); default now")
+    ap.add_argument("--local-log", help="ignore --url: start the dummy app in-process on 127.0.0.1 and write its "
+                                        "log here (labels go to <log>.labels)")
     a = ap.parse_args()
-    t0 = time.time()
-    n = run(a.url, a.sessions, a.seed, a.attacks_per_class, start=a.start or time.time())
+    t0, srv = time.time(), None
+    if a.local_log:
+        from waf import app  # noqa: PLC0415  (only needed in this mode)
+        srv = app.make_server("127.0.0.1", 0, a.local_log, a.local_log + ".labels")
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        a.url = f"http://127.0.0.1:{srv.server_address[1]}"
+    try:
+        n = run(a.url, a.sessions, a.seed, a.attacks_per_class, start=a.start or time.time())
+    finally:
+        if srv:
+            srv.shutdown()
+            srv.server_close()
     print(f"sent {n} requests to {a.url} in {time.time() - t0:.1f}s")
