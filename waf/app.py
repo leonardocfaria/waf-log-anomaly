@@ -59,7 +59,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
         ip, ts, label = self.client_address[0], time.time(), "unknown"
-        if self.server.trust_headers or trusted(ip):
+        if self.server.trust_headers or self.server.loopback_check(ip):
             ip = self.headers.get("X-Forwarded-For", ip).split(",")[0].strip() or ip
             ts = self.headers.get("X-Sim-Time", ts)
             label = self.headers.get("X-Label", label)
@@ -91,7 +91,7 @@ def make_server(host: str, port: int, log_path: str, labels_path: str | None = N
                 trust_headers: bool = False) -> HTTPServer:
     """trust_headers: honour the X-* headers from any client (only for the compose demo network)."""
     srv = _Server((host, port), Handler)
-    srv.trust_headers = trust_headers
+    srv.trust_headers, srv.loopback_check = trust_headers, trusted
     srv.lock = threading.Lock()
     srv.log = open(log_path, "a", encoding="utf-8")
     srv.labels = open(labels_path, "a", encoding="utf-8") if labels_path else None

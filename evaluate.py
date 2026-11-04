@@ -1,6 +1,6 @@
 """End-to-end eval: generate labelled traffic against a local dummy app, train on benign, score, report.
 
-python evaluate.py   (about 15 s on a laptop CPU; writes reports/eval.md and reports/eval.json)
+python evaluate.py   (about 5 s on a laptop CPU; writes reports/eval.md and reports/eval.json)
 """
 import json
 import tempfile

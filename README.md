@@ -13,12 +13,12 @@ starts itself, a per-class evaluation, a streaming tail mode and a small dashboa
 
 ## Setup
 
-Python 3.11+, CPU only.
+Python 3.12+ (the pinned numpy needs it), CPU only.
 
 ```bash
 cd security/waf-log-anomaly
 pip install -r requirements.txt     # numpy, scikit-learn
-python -m unittest -v               # 36 tests, about 3 s
+python -m unittest -v               # 44 tests, about 4 s
 ```
 
 ## Usage
@@ -105,12 +105,13 @@ class, 5,181 requests.
 | path_traversal | 76 | 1.000 | 0.987 | 0.987 | 1.000 |
 | scanner | 193 | 0.819 | 0.249 | 0.249 | 0.850 |
 | bruteforce | 858 | 0.000 | 1.000 | 1.000 | 1.000 |
-| obfuscated | 87 | 0.310 | 0.897 | 0.966 | 0.966 |
+| obfuscated | 87 | 0.184 | 0.897 | 0.966 | 0.966 |
 
-Combined precision is 0.970, recall 0.978 and F1 0.974, at a 1.2% false-positive rate. Rules alone: precision 1.000, recall 0.333.
+Combined precision is 0.970, recall 0.978 and F1 0.974, at a 1.2% false-positive rate. Rules alone: precision 1.000, recall 0.325.
 
 What each part catches:
-- Rules give the attack class and never misfire on benign traffic.
+- Rules give the attack class and fired on none of the synthetic benign traffic. Real URLs will produce some
+  false positives (for example `?f=/usr/local/../bin` is flagged as traversal).
 - The forest catches what has no signature: login brute force (from rate and POST ratio) and obfuscated
   payloads (from `%xx` count and special-character ratio).
 - Scanners that spoof a browser user agent and probe generic paths (`/backup.zip`, `/admin/`) are the main
@@ -121,6 +122,12 @@ What each part catches:
 
 ## Limitations
 
+- **Read the headline numbers with care.**
+  - Brute force is 858 of the 1,429 attack requests, so per-request recall mostly reflects the easiest class.
+    Without brute force, combined recall is about 0.94.
+  - The test mix is 28% attacks. At a realistic 1% attack rate, the same recall and false-positive rate give
+    a precision of about 0.45: most alerts would be false.
+  - Rule recall of 1.0 is circular, because the same author wrote the rules and the payload lists.
 - **The traffic is synthetic.** Benign sessions come from a small page catalogue and attacks from fixed
   payload lists, so real traffic will be messier. Expect a higher false-positive rate. Retrain on your own
   benign logs and re-tune `THRESHOLD_PCT`.
@@ -130,9 +137,19 @@ What each part catches:
   UTF-8 get past the rules. The anomaly model catches most of them here, but not by design.
 - **Per-client state is keyed by IP.** NAT and shared proxies merge users. Attackers who rotate IPs split their
   rate signal. The client table is never evicted (marked `shortcut:` in `stream.py`).
+- **Out-of-order timestamps.** The per-client window only expires from its oldest end. With slightly
+  out-of-order lines (multi-worker servers), a late line can be counted a little too long.
+- **Unparsable lines are only counted.** HTTP/0.9 requests, odd methods and TLS bytes sent to an HTTP port
+  are typical scanner noise, but they become a "skipped" counter rather than per-client alerts.
+- **Log escapes.** nginx `\xHH` and Apache `\"` / `\\` escapes are decoded before rules and features see
+  the request.
 - **Tail detects truncation by size.** A file rewritten to a larger size between two polls looks like an append.
 - **The novelty guard depends on the training data.** It is only as good as the benign training log: if that
   log never contains, say, a 5xx, every 5xx becomes an alert.
-- **No auth on the dashboard.** It binds to 127.0.0.1 by default; keep it there.
+- **No auth on the dashboard and no `Host` check.** It binds to 127.0.0.1 by default; keep it there.
+- **Traffic generator safety.** It refuses every host except loopback, and allows the compose `dummy-app`
+  only when `WAF_COMPOSE=1`. It ignores environment proxies and never follows redirects, so nothing can
+  bounce it off the machine. Rule regexes scan at most 8 KB per decoding layer, with no unbounded gaps,
+  and have timing tests.
 - **Docker behind a TLS-intercepting proxy.** In such an environment, `pip install` in the image build needs
   that proxy's CA. The overnight build verified the demo with a local, uncommitted override that added it.

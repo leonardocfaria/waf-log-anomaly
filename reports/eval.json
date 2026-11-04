@@ -10,7 +10,7 @@
   },
   "n_test_requests": 5181,
   "threshold": 0.6282,
-  "runtime_seconds": 5.3,
+  "runtime_seconds": 7.0,
   "per_class_detection_rate": {
     "benign": {
       "n": 3752,
@@ -56,7 +56,7 @@
     },
     "obfuscated": {
       "n": 87,
-      "rules": 0.3103,
+      "rules": 0.1839,
       "iforest": 0.8966,
       "iforest+novelty": 0.9655,
       "combined (rules + iforest+novelty)": 0.9655
@@ -65,8 +65,8 @@
   "overall": {
     "rules": {
       "precision": 1.0,
-      "recall": 0.3331,
-      "f1": 0.4997,
+      "recall": 0.3254,
+      "f1": 0.491,
       "fpr": 0.0
     },
     "iforest": {
@@ -90,11 +90,10 @@
   },
   "rule_precision": {
     "sqli": {
-      "fired": 117,
-      "precision": 0.906,
+      "fired": 106,
+      "precision": 1.0,
       "labels_when_fired": {
-        "sqli": 106,
-        "obfuscated": 11
+        "sqli": 106
       }
     },
     "xss": {
@@ -133,7 +132,7 @@
       "distinct_path_ratio": 1
     },
     "obfuscated": {
-      "pct_encoded": 42,
+      "pct_encoded": 53,
       "special_ratio": 15
     },
     "scanner": {

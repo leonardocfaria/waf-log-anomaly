@@ -27,7 +27,7 @@ class ParseTest(unittest.TestCase):
 
     def test_escaped_quote_in_ua(self):
         r = parse('10.0.0.1 - - [05/Nov/2026:01:02:03 +0000] "GET /a HTTP/1.1" 200 1 "-" "x\\"y"')
-        self.assertEqual(r["ua"], 'x\\"y')
+        self.assertEqual(r["ua"], 'x"y')  # Apache-style \" is unescaped
 
     def test_garbage(self):
         for bad in ["", "hello", '10.0.0.1 - - [05/Nov/2026:01:02:03 +0000] "-" 400 0 "-" "-"',
@@ -37,3 +37,15 @@ class ParseTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EscapeTest(unittest.TestCase):
+    def test_nginx_hex_escapes_decoded(self):
+        r = parse('10.0.0.1 - - [05/Nov/2026:01:02:03 +0000] "GET /item?id=1\\x22%20OR%20\\x221\\x22=\\x221 HTTP/1.1" 200 1 "-" "x\\x22y"')
+        self.assertEqual(r["query"], 'id=1"%20OR%20"1"="1')
+        self.assertEqual(r["ua"], 'x"y')
+
+    def test_backslash_escape(self):
+        r = parse('10.0.0.1 - - [05/Nov/2026:01:02:03 +0000] "GET /dl?f=..\\x5C..\\x5Cboot.ini HTTP/1.1" 200 1 "-" "a\\\\b"')
+        self.assertEqual(r["query"], "f=..\\..\\boot.ini")
+        self.assertEqual(r["ua"], "a\\b")

@@ -3,6 +3,7 @@
 python -m waf.traffic --url http://127.0.0.1:8000 --sessions 300 --attacks-per-class 15 --seed 2
 """
 import argparse
+import os
 import random
 import threading
 import time
@@ -10,7 +11,8 @@ import urllib.error
 import urllib.request
 from urllib.parse import quote, urlsplit
 
-ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1", "dummy-app"}  # dummy-app = the compose service we start
+LOCAL_HOSTS = {"127.0.0.1", "localhost", "::1"}
+COMPOSE_HOST = "dummy-app"  # the compose service we start; allowed only with WAF_COMPOSE=1 (set in docker-compose.yml)
 ATTACK_CLASSES = ["sqli", "xss", "path_traversal", "scanner", "bruteforce", "obfuscated"]
 
 BROWSERS = [
@@ -44,8 +46,18 @@ PAYLOADS = {
 def check_target(url: str) -> None:
     """Refuse anything that is not this machine (or the compose dummy-app we start)."""
     u = urlsplit(url)
-    if u.scheme not in ("http", "https") or u.hostname not in ALLOWED_HOSTS:
-        raise ValueError(f"refusing to send traffic to {url!r}: only {sorted(ALLOWED_HOSTS)} are allowed")
+    allowed = LOCAL_HOSTS | ({COMPOSE_HOST} if os.environ.get("WAF_COMPOSE") == "1" else set())
+    if u.scheme not in ("http", "https") or u.hostname not in allowed:
+        raise ValueError(f"refusing to send traffic to {url!r}: only {sorted(allowed)} are allowed")
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args):
+        return None  # a redirect could point off-box: never follow it
+
+
+# No environment proxies (they would carry attack traffic off-box) and no redirects.
+_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}), _NoRedirect)
 
 
 def _ip(rng):
@@ -110,7 +122,7 @@ def run(base_url: str, n_sessions: int, seed: int, attack_sessions_per_class: in
         req = urllib.request.Request(base + path, method=method, data=b"user=admin&password=guess" if method == "POST" else None,
                                      headers={"User-Agent": ua, "X-Forwarded-For": ip, "X-Sim-Time": f"{t:.3f}", "X-Label": label})
         try:
-            urllib.request.urlopen(req, timeout=10).read()
+            _OPENER.open(req, timeout=10).read()
         except urllib.error.HTTPError as e:
             e.read()
     return len(events)

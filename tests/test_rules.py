@@ -45,3 +45,21 @@ class RulesTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RulesHardeningTest(unittest.TestCase):
+    def test_no_quadratic_backtracking(self):
+        import time
+        for q in ["'or1" * 16000, "%27or1" * 11000, "1-" * 30000, "<" * 60000, "../" * 20000]:
+            t = time.perf_counter()
+            match(req("/x", q, ua="a" * 60000))
+            self.assertLess(time.perf_counter() - t, 1.0, q[:10])
+
+    def test_benign_lookalikes_from_review(self):
+        for r in [req("/search", "q=size+10+-+12+--+sale"), req("/api/v1/*"), req("/search", "q=product+5+%23+3"),
+                  req("/search", "q=onload%3Dtrue")]:
+            self.assertEqual(match(r), [], r)
+
+    def test_numeric_comment_sqli_still_caught(self):
+        self.assertIn("sqli", match(req("/item", "id=1'--")))
+        self.assertIn("sqli", match(req("/item", "id=1 OR 1=1--")))

@@ -16,7 +16,9 @@ services:
     depends_on: [dummy-app]
   traffic:
     build: .
-    # Targets only the dummy-app service started above (waf.traffic refuses any other host).
+    # Targets only the dummy-app service started above (waf.traffic refuses any other host;
+    # WAF_COMPOSE=1 is what allows the name "dummy-app" at all).
+    environment: {WAF_COMPOSE: "1"}
     command: sh -c "sleep 10 && python -m waf.traffic --url http://dummy-app:8000 --sessions 200 --attacks-per-class 5 --seed 2"
     depends_on: [dummy-app, detector]
 volumes:

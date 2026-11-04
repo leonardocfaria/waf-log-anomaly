@@ -28,11 +28,15 @@ def follow(path: str, stop: threading.Event, poll: float = 0.2, from_start: bool
                 from_start = True  # the file did not exist yet, so all of it will be new
                 stop.wait(poll)
                 continue
+            except OSError as e:  # e.g. permissions after rotation: say so and keep retrying, never die silently
+                print(f"waf.stream: cannot open {path}: {e}; retrying", file=sys.stderr)
+                stop.wait(max(poll, 5))
+                continue
             ino = os.fstat(f.fileno()).st_ino
             if not from_start:
                 f.seek(0, os.SEEK_END)
             from_start = True  # any later reopen is a new file: read it whole
-        chunk = f.readline()
+        chunk = f.readline(MAX_LINE)
         if chunk:
             buf += chunk
             if buf.endswith("\n"):
@@ -164,10 +168,21 @@ def main():
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     print(f"dashboard on http://{a.host}:{a.port}/ ; tailing {a.log}", file=sys.stderr)
     q = queue.Queue(maxsize=100_000)
-    threading.Thread(target=lambda: [q.put(x) for x in follow(a.log, stop, from_start=a.from_start)], daemon=True).start()
+
+    def pump():
+        for x in follow(a.log, stop, from_start=a.from_start):
+            q.put(x)
+
+    reader = threading.Thread(target=pump, daemon=True)
+    reader.start()
     try:
         while True:
-            batch = [q.get()]
+            try:
+                batch = [q.get(timeout=1)]
+            except queue.Empty:
+                if not reader.is_alive():
+                    sys.exit("waf.stream: log reader stopped unexpectedly")
+                continue
             while len(batch) < 1000 and not q.empty():  # score whatever has queued up in one model call
                 batch.append(q.get_nowait())
             for r in det.process_batch(batch):

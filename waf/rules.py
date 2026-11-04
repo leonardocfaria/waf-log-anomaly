@@ -3,9 +3,10 @@ import re
 from urllib.parse import unquote_plus
 
 _URL_RULES = {
-    "sqli": r"('|\")\s*(or|and)\s*('|\"|\d)\s*\S*\s*=|\bunion\b.{0,20}\bselect\b|;\s*(drop|delete|insert|update|shutdown)\b"
-            r"|\b(sleep|benchmark|pg_sleep)\s*\(|\bwaitfor\s+delay\b|('|\d)\s*(--|#|/\*)|\binformation_schema\b",
-    "xss": r"<\s*(script|iframe|svg|img|body|object|embed)\b|\bon(error|load|mouseover|focus|click)\s*=|javascript\s*:|\balert\s*\(|document\.(cookie|location)",
+    # Gaps are bounded ({0,40}): an unbounded \S* here made long attacker URLs take seconds (quadratic backtracking).
+    "sqli": r"('|\")\s*(or|and)\s*('|\"|\d)\S{0,40}?\s*=|\b(or|and)\s+\d+\s*=\s*\d+|\bunion\b.{0,20}\bselect\b|;\s*(drop|delete|insert|update|shutdown)\b"
+            r"|\b(sleep|benchmark|pg_sleep)\s*\(|\bwaitfor\s+delay\b|'\s*(--|#|/\*)|\binformation_schema\b",
+    "xss": r"<\s*(script|iframe|svg|img|body|object|embed)\b|[\s\"'/]on(error|load|mouseover|focus|click)\s*=|javascript\s*:|\balert\s*\(|document\.(cookie|location)",
     "path_traversal": r"(\.\.[/\\])|([/\\]\.\.$)|/etc/(passwd|shadow|hosts)|\b(boot|win)\.ini\b|c:\\\\windows",
 }
 _SCANNER_UA = r"sqlmap|nikto|nmap|masscan|zgrab|nuclei|dirbuster|gobuster|wfuzz|ffuf|acunetix|nessus|openvas|w3af|whatweb|zmeu"
@@ -16,9 +17,12 @@ _UA = re.compile(_SCANNER_UA, re.I)
 _PATH = re.compile(_SCANNER_PATH, re.I)
 
 
+MAX_SCAN = 8192  # nginx/Apache cap request lines near 8 KB by default; never regex-scan more than this
+
+
 def _decoded(s: str) -> str:
     """All decoding layers joined, so multi-encoded payloads (%25252e -> %252e -> %2e -> .) still match."""
-    layers = [s]
+    layers = [s[:MAX_SCAN]]
     for _ in range(4):
         nxt = unquote_plus(layers[-1])
         if nxt == layers[-1]:
@@ -30,6 +34,6 @@ def _decoded(s: str) -> str:
 def match(r: dict) -> list[str]:
     url = _decoded(r["path"] + ("?" + r["query"] if r["query"] else ""))
     hits = [name for name, rx in _COMPILED.items() if rx.search(url)]
-    if _UA.search(r["ua"]) or _PATH.search(r["path"]):
+    if _UA.search(r["ua"][:MAX_SCAN]) or _PATH.search(r["path"]):
         hits.append("scanner")
     return hits

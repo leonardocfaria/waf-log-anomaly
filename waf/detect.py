@@ -9,9 +9,9 @@ class Detector:
         self.model, self.windows = model, features.Windows(window_seconds)
 
     @classmethod
-    def train_on_log(cls, path: str) -> "Detector":
+    def train_on_log(cls, path: str, window_seconds: float = 60) -> "Detector":
         """Fit the model on a log of benign traffic."""
-        w, X = features.Windows(), []
+        w, X = features.Windows(window_seconds), []
         with open(path, encoding="utf-8", errors="replace") as f:
             for line in f:
                 r = parse(line)
@@ -19,7 +19,7 @@ class Detector:
                     X.append(features.vector(r, w))
         if len(X) < 50:
             raise ValueError(f"need at least 50 parsable benign lines in {path}, got {len(X)}")
-        return cls(Model.fit(X))
+        return cls(Model.fit(X), window_seconds)
 
     def process(self, line: str) -> dict | None:
         return self.process_batch([line])[0]
